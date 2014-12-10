@@ -133,7 +133,7 @@ quantile(mu,c(0.025,0.5,0.975))
 b.df = as.data.frame(as.matrix(bmcmc))
 ci = matrix(NA,nyears,3)
 for(y in 1:nyears){
-  ci[y,] <- quantile(b.df$mu+b.df[,paste0("alpha.y[",y,"]")],c(0.025,0.5,0.975))
+  ci[y,] <- quantile(b.df[,paste0("mu[",y,"]")],c(0.025,0.5,0.975))
 }
 plot(years,ci[,2],type='n',ylim=range(ci),ylab="Mean DBH")
 ciEnvelope(years,ci[,1],ci[,3],col="lightBlue")
