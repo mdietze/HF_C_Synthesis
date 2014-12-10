@@ -21,6 +21,11 @@ output: html_document
 ```{r}
 setwd("~/Dropbox/HF C Synthesis")
 library(rjags)
+
+ciEnvelope <- function(x,ylo,yhi,...){
+  polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
+                                      ylo[1])), border = NA,...) 
+}
 ```
 
 
@@ -38,16 +43,39 @@ tree = tree[,-grep('^X',colnames(tree))]  ## drop columns with names starting wi
 
 ## 3. Format data for JAGS
 
+```{r}
+
+year = tree$year
+years = min(year):max(year)
+nyears = length(years)
+year.index = year+1-years[1]
+
+plot = tree$plot
+plots = unique(plot)
+nplots = length(plots)
+plot.index = as.integer(plot)
+
+data = list(dbh=tree$dbh,n=nrow(tree),ny=nyears,yi=year.index)
+
+
+```
+
 
 ## 4. Specify / Estimate Priors
 
 
 ## 5. Specify / Estimate Initial Conditions for MCMC
 ```{r}
-init.cond1 <- list()
-init.cond1[[1]] = list(mu=15,prec=1)
-init.cond1[[2]] = list(mu=5,prec=2)
-init.cond1[[3]] = list(mu=10,prec=0.5)
+x = tree$dbh
+mu.ic = mean(x,na.rm=TRUE)
+prec.ic = 1/var(x,na.rm=TRUE)
+alpha.ic = mu.ic - tapply(x,year.index,mean,na.rm=TRUE)
+tau_year.ic = 1/var(alpha.ic,na.rm=TRUE)
+alpha.ic[as.numeric(names(alpha.ic))] <- alpha.ic
+alpha.ic[is.na(alpha.ic)] <- rnorm(sum(is.na(alpha.ic)),0,sqrt(1/tau_year.ic))
+
+
+init =  list(mu=mu.ic,tau=prec.ic,alpha.y=alpha.ic,tau_year=tau_year.ic)
 ```
 
 ## 6. Basic Code
@@ -55,18 +83,22 @@ init.cond1[[3]] = list(mu=10,prec=0.5)
 ```{r}
 BasicBudget = "
 model{
-  mu ~ dnorm(0,0.0001)
+  mu ~ dnorm(20,0.001)
   tau ~ dgamma(0.1,0.1)
 
+  tau_year ~ dgamma(0.1,0.1)
+  for(y in 1:ny){
+    alpha.y[y] ~ dnorm(0,tau_year)
+  }
+
   for(i in 1:n){
-    dbh[i] ~ dnorm(mu,tau)
+    theta[i] <- mu + alpha.y[yi[i]]
+    dbh[i] ~ dnorm(theta[i],tau)
   }
 
 }
 "
 
-data = list(dbh=tree$dbh,n=nrow(tree))
-init = NULL
 ## compile JAGS model
 j.model   <- jags.model (file = textConnection(BasicBudget),
                            data = data,
@@ -74,12 +106,10 @@ j.model   <- jags.model (file = textConnection(BasicBudget),
                            n.chains = 3)
 ## burn-in
 bmcmc   <- coda.samples (model = j.model,
-                              variable.names = c("mu","tau"),
+                              variable.names = c("mu","tau","tau_year","alpha.y"),
                               n.iter = 2000)
 
 ```
-
-
 
 
 ## 7. Post-Processing & Convergence Checking
@@ -95,4 +125,15 @@ quantile(mu,c(0.025,0.5,0.975))
 ```
 
 ## 8. Visualization
+
+```{r}
+b.df = as.data.frame(as.matrix(bmcmc))
+ci = matrix(NA,nyears,3)
+for(y in 1:nyears){
+  ci[y,] <- quantile(b.df$mu+b.df[,paste0("alpha.y[",y,"]")],c(0.025,0.5,0.975))
+}
+plot(years,ci[,2],type='n',ylim=range(ci),ylab="Mean DBH")
+ciEnvelope(years,ci[,1],ci[,3],col="lightBlue")
+lines(years,ci[,2],lwd=3)
+```
 
