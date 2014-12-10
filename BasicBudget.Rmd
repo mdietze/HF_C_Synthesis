@@ -1,0 +1,98 @@
+---
+title: "Basic Budget"
+author: "Mike Dietze"
+date: "December 9, 2014"
+output: html_document
+---
+
+## TASKS
+
+1. Load up data
+2. Estimate any uncertainties required as inputs, but which were not provided in the data
+3. Format data for JAGS
+4. Specify / Estimate Priors
+5. Specify / Estimate Initial Conditions for MCMC
+6. Basic Code
+7. Post-Processing & Convergence Checking
+8. Visualization
+
+## 0. Settings, etc
+
+```{r}
+setwd("~/Dropbox/HF C Synthesis")
+library(rjags)
+```
+
+
+## 1. Load up data
+
+```{r}
+tree = read.csv("Data/live trees/hf-c-trees-live.csv",header=TRUE)
+tree = tree[,-grep('^X',colnames(tree))]  ## drop columns with names starting with X
+```
+
+
+## 2. Estimate any uncertainties required as inputs, but which were not provided in the data
+
+### 2a. Load Allometric posteriors
+
+## 3. Format data for JAGS
+
+
+## 4. Specify / Estimate Priors
+
+
+## 5. Specify / Estimate Initial Conditions for MCMC
+```{r}
+init.cond1 <- list()
+init.cond1[[1]] = list(mu=15,prec=1)
+init.cond1[[2]] = list(mu=5,prec=2)
+init.cond1[[3]] = list(mu=10,prec=0.5)
+```
+
+## 6. Basic Code
+
+```{r}
+BasicBudget = "
+model{
+  mu ~ dnorm(0,0.0001)
+  tau ~ dgamma(0.1,0.1)
+
+  for(i in 1:n){
+    dbh[i] ~ dnorm(mu,tau)
+  }
+
+}
+"
+
+data = list(dbh=tree$dbh,n=nrow(tree))
+init = NULL
+## compile JAGS model
+j.model   <- jags.model (file = textConnection(BasicBudget),
+                           data = data,
+                           inits = init,
+                           n.chains = 3)
+## burn-in
+bmcmc   <- coda.samples (model = j.model,
+                              variable.names = c("mu","tau"),
+                              n.iter = 2000)
+
+```
+
+
+
+
+## 7. Post-Processing & Convergence Checking
+
+```{r}
+plot(bmcmc)  		## mcmc history and density plot
+autocorr.plot(bmcmc)		## autocorrelation
+cumuplot(bmcmc)		## quantile plot
+gelman.plot(bmcmc)		## GRB statistic
+summary(bmcmc)		## summary table
+mu = as.data.frame(as.matrix(bmcmc))$mu
+quantile(mu,c(0.025,0.5,0.975))
+```
+
+## 8. Visualization
+
