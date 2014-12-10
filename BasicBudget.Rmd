@@ -74,8 +74,7 @@ tau_year.ic = 1/var(alpha.ic,na.rm=TRUE)
 alpha.ic[as.numeric(names(alpha.ic))] <- alpha.ic
 alpha.ic[is.na(alpha.ic)] <- rnorm(sum(is.na(alpha.ic)),0,sqrt(1/tau_year.ic))
 
-
-init =  list(mu=mu.ic,tau=prec.ic,alpha.y=alpha.ic,tau_year=tau_year.ic)
+init =  list(mu=mu.ic+alpha.ic,tau_obs=prec.ic,tau_proc=tau_year.ic)
 ```
 
 ## 6. Basic Code
@@ -83,17 +82,21 @@ init =  list(mu=mu.ic,tau=prec.ic,alpha.y=alpha.ic,tau_year=tau_year.ic)
 ```{r}
 BasicBudget = "
 model{
-  mu ~ dnorm(20,0.001)
-  tau ~ dgamma(0.1,0.1)
+  mu0 ~ dnorm(20,0.001)
+  tau_proc ~ dgamma(0.1,0.1)
+  tau_obs ~ dgamma(0.1,0.1)
 
-  tau_year ~ dgamma(0.1,0.1)
-  for(y in 1:ny){
-    alpha.y[y] ~ dnorm(0,tau_year)
+  ## Process model
+  mu[1] <- mu0
+  for(y in 2:ny){
+    E[y] <- mu[y-1] 
+    mu[y] ~ dnorm(E[y],tau_proc)
   }
 
+  ## observation model
   for(i in 1:n){
-    theta[i] <- mu + alpha.y[yi[i]]
-    dbh[i] ~ dnorm(theta[i],tau)
+    theta[i] <- mu[yi[i]]
+    dbh[i] ~ dnorm(theta[i],tau_obs)
   }
 
 }
@@ -106,7 +109,7 @@ j.model   <- jags.model (file = textConnection(BasicBudget),
                            n.chains = 3)
 ## burn-in
 bmcmc   <- coda.samples (model = j.model,
-                              variable.names = c("mu","tau","tau_year","alpha.y"),
+                              variable.names = c("mu","tau_obs","tau_proc"),
                               n.iter = 2000)
 
 ```
