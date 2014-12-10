@@ -55,7 +55,18 @@ plots = unique(plot)
 nplots = length(plots)
 plot.index = as.integer(plot)
 
-data = list(dbh=tree$dbh,n=nrow(tree),ny=nyears,yi=year.index)
+area = tree$size
+plot.area = tapply(area,plot,mean,na.rm=TRUE)
+plot.yr = table(plot,year)
+stem.count = apply(plot.yr,2,sum,na.rm=TRUE)
+for(y in 1:ncol(plot.yr)){
+  sel = which(plot.yr[,y]>0)
+  plot.yr[sel,y] = plot.area[sel]
+}
+census.area = apply(plot.yr,2,sum,na.rm=TRUE)
+census.time = as.numeric(names(census.area))-years[1]+1
+
+data = list(dbh=tree$dbh,n=nrow(tree),ny=nyears,yi=year.index,stem.count=stem.count,census.area=census.area,census.time=census.time)
 
 
 ```
@@ -82,6 +93,8 @@ init =  list(mu=mu.ic+alpha.ic,tau_obs=prec.ic,tau_proc=tau_year.ic)
 ```{r}
 BasicBudget = "
 model{
+
+  ## Diameter
   mu0 ~ dnorm(20,0.001)
   tau_proc ~ dgamma(0.1,0.1)
   tau_obs ~ dgamma(0.1,0.1)
@@ -99,6 +112,24 @@ model{
     dbh[i] ~ dnorm(theta[i],tau_obs)
   }
 
+  ## Stem Density ################
+  rho0 ~ dlnorm(0,0.001)
+  tau_proc.rho ~ dgamma(0.1,0.1)
+  tau_obs.rho ~ dgamma(0.1,0.1)
+
+  ## Process model
+  rho[1] <- rho0
+  for(y in 2:ny){
+    Er[y] <- log(rho[y-1]) 
+    rho[y] ~ dlnorm(Er[y],tau_proc.rho)
+  }
+
+  ## observation model
+  for(y in 1:30){
+    Ecount[y] <- rho[census.time[y]]*census.area[y]
+    stem.count[y] ~ dpois(Ecount[y])
+  }
+
 }
 "
 
@@ -109,8 +140,8 @@ j.model   <- jags.model (file = textConnection(BasicBudget),
                            n.chains = 3)
 ## burn-in
 bmcmc   <- coda.samples (model = j.model,
-                              variable.names = c("mu","tau_obs","tau_proc"),
-                              n.iter = 2000)
+                              variable.names = c("mu","tau_obs","tau_proc","rho","tau_proc.rho"),
+                              n.iter = 3000)
 
 ```
 
@@ -138,5 +169,14 @@ for(y in 1:nyears){
 plot(years,ci[,2],type='n',ylim=range(ci),ylab="Mean DBH")
 ciEnvelope(years,ci[,1],ci[,3],col="lightBlue")
 lines(years,ci[,2],lwd=3)
+
+ci.r = matrix(NA,nyears,3)
+for(y in 1:nyears){
+  ci.r[y,] <- quantile(b.df[,paste0("rho[",y,"]")],c(0.025,0.5,0.975))
+}
+plot(years,ci.r[,2],type='n',ylim=range(ci.r),ylab="Mean Stem Density")
+ciEnvelope(years,ci.r[,1],ci.r[,3],col="lightBlue")
+lines(years,ci.r[,2],lwd=3)
+
 ```
 
