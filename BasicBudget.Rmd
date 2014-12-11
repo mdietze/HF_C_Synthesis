@@ -34,12 +34,18 @@ ciEnvelope <- function(x,ylo,yhi,...){
 ```{r}
 tree = read.csv("Data/live trees/hf-c-trees-live.csv",header=TRUE)
 tree = tree[,-grep('^X',colnames(tree))]  ## drop columns with names starting with X
+tree = tree[-which(is.na(tree$dbh)),] ## drop rows with missing DBH
 ```
 
 
 ## 2. Estimate any uncertainties required as inputs, but which were not provided in the data
 
 ### 2a. Load Allometric posteriors
+```{r}
+b0 = -2.48
+b1 = 2.48
+```
+
 
 ## 3. Format data for JAGS
 
@@ -66,7 +72,7 @@ for(y in 1:ncol(plot.yr)){
 census.area = apply(plot.yr,2,sum,na.rm=TRUE)
 census.time = as.numeric(names(census.area))-years[1]+1
 
-data = list(dbh=tree$dbh,n=nrow(tree),ny=nyears,yi=year.index,stem.count=stem.count,census.area=census.area,census.time=census.time)
+data = list(dbh=tree$dbh,n=nrow(tree),ny=nyears,yi=year.index,stem.count=stem.count,census.area=census.area,census.time=census.time,b0=b0,b1=b1)
 
 
 ```
@@ -92,9 +98,14 @@ init =  list(mu=mu.ic+alpha.ic,tau_obs=prec.ic,tau_proc=tau_year.ic)
 
 ```{r}
 BasicBudget = "
+data{
+  for(i in 1:n){
+    Emass[i] <- exp(b0 + b1*log(dbh[i])) ## expected allometric biomass, log scale
+  }
+}
 model{
 
-  ## Diameter
+  ## Stem Biomass
   mu0 ~ dnorm(20,0.001)
   tau_proc ~ dgamma(0.1,0.1)
   tau_obs ~ dgamma(0.1,0.1)
@@ -102,14 +113,14 @@ model{
   ## Process model
   mu[1] <- mu0
   for(y in 2:ny){
-    E[y] <- mu[y-1] 
-    mu[y] ~ dnorm(E[y],tau_proc)
+    E[y] <- log(mu[y-1]) 
+    mu[y] ~ dlnorm(E[y],tau_proc)
   }
 
   ## observation model
   for(i in 1:n){
-    theta[i] <- mu[yi[i]]
-    dbh[i] ~ dnorm(theta[i],tau_obs)
+    theta[i] <- log(mu[yi[i]])
+    Emass[i] ~ dlnorm(theta[i],tau_obs)
   }
 
   ## Stem Density ################
@@ -166,7 +177,8 @@ ci = matrix(NA,nyears,3)
 for(y in 1:nyears){
   ci[y,] <- quantile(b.df[,paste0("mu[",y,"]")],c(0.025,0.5,0.975))
 }
-plot(years,ci[,2],type='n',ylim=range(ci),ylab="Mean DBH")
+yrng=range(ci); yrng[2] = min(yrng[2],200)
+plot(years,ci[,2],type='n',ylim=yrng,ylab="Mean Tree Biomass")
 ciEnvelope(years,ci[,1],ci[,3],col="lightBlue")
 lines(years,ci[,2],lwd=3)
 
@@ -177,6 +189,17 @@ for(y in 1:nyears){
 plot(years,ci.r[,2],type='n',ylim=range(ci.r),ylab="Mean Stem Density")
 ciEnvelope(years,ci.r[,1],ci.r[,3],col="lightBlue")
 lines(years,ci.r[,2],lwd=3)
+
+ci.agb = matrix(NA,nyears,3)
+for(y in 1:nyears){
+  agb = b.df[,paste0("mu[",y,"]")]*b.df[,paste0("rho[",y,"]")]*10 # kg/m2 -> Mg/ha
+  ci.agb[y,] <- quantile(agb,c(0.025,0.5,0.975))
+}
+yrng=range(ci); yrng[2] = min(yrng[2],200)
+plot(years,ci.agb[,2],type='n',ylim=yrng,ylab="Mean AGB (Mg/ha)")
+ciEnvelope(years,ci.agb[,1],ci.agb[,3],col="lightBlue")
+lines(years,ci.agb[,2],lwd=3)
+
 
 ```
 
