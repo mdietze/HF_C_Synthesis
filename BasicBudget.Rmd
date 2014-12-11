@@ -44,6 +44,9 @@ tree = tree[-which(is.na(tree$dbh)),] ## drop rows with missing DBH
 ```{r}
 b0 = -2.48
 b1 = 2.48
+B = c(b0,b1)
+SIGMA = solve(diag(0.01,2))
+tau.allom = 1000
 ```
 
 
@@ -72,7 +75,7 @@ for(y in 1:ncol(plot.yr)){
 census.area = apply(plot.yr,2,sum,na.rm=TRUE)
 census.time = as.numeric(names(census.area))-years[1]+1
 
-data = list(dbh=tree$dbh,n=nrow(tree),ny=nyears,yi=year.index,stem.count=stem.count,census.area=census.area,census.time=census.time,b0=b0,b1=b1)
+data = list(dbh=tree$dbh,n=nrow(tree),ny=nyears,yi=year.index,stem.count=stem.count,census.area=census.area,census.time=census.time,B=B,SIGMA=SIGMA,tau.allom=tau.allom)
 
 
 ```
@@ -99,8 +102,10 @@ init =  list(mu=mu.ic+alpha.ic,tau_obs=prec.ic,tau_proc=tau_year.ic)
 ```{r}
 BasicBudget = "
 data{
+  b ~ dmnorm(B,SIGMA)
   for(i in 1:n){
-    Emass[i] <- exp(b0 + b1*log(dbh[i])) ## expected allometric biomass, log scale
+    mu.allom[i] <- b[1] + b[2]*log(dbh[i]) ## expected allometric biomass, log scale
+    Emass[i] ~ dlnorm(mu.allom[i],tau.allom) 
   }
 }
 model{
@@ -195,7 +200,7 @@ for(y in 1:nyears){
   agb = b.df[,paste0("mu[",y,"]")]*b.df[,paste0("rho[",y,"]")]*10 # kg/m2 -> Mg/ha
   ci.agb[y,] <- quantile(agb,c(0.025,0.5,0.975))
 }
-yrng=range(ci); yrng[2] = min(yrng[2],200)
+yrng=range(ci); yrng[2] = min(yrng[2],150)
 plot(years,ci.agb[,2],type='n',ylim=yrng,ylab="Mean AGB (Mg/ha)")
 ciEnvelope(years,ci.agb[,1],ci.agb[,3],col="lightBlue")
 lines(years,ci.agb[,2],lwd=3)
