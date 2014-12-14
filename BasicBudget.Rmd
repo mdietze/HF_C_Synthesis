@@ -280,12 +280,17 @@ quantile(mu,c(0.025,0.5,0.975))
 ```{r}
 b.df = as.data.frame(as.matrix(bmcmc))
 
+cols = col2rgb(1:nsites,TRUE)
+cols['alpha',]=cols['alpha',]/2
+mycol <- function(i){rgb(cols[1,i],cols[2,i],cols[3,i],cols[4,i],maxColorValue=255)}
+
+#### MEAN STEM BIOMASS ###################
 ci = matrix(NA,nyears,3)
-mup.median = matrix(NA,nsites,nyears)
+mup.ci = array(NA,c(nsites,nyears,3))
 for(y in 1:nyears){
   ci[y,] <- quantile(b.df[,paste0("mu[",y,"]")],c(0.025,0.5,0.975))
-    for(s in 1:nsites){
-    mup.median[s,y] = median(b.df[,paste0("mup[",s,",",y,"]")])
+  for(s in 1:nsites){
+    mup.ci[s,y,] = quantile(b.df[,paste0("mup[",s,",",y,"]")],c(0.025,0.5,0.975))
   }
 }
 #yrng=range(ci); yrng[2] = min(yrng[2],200)
@@ -294,22 +299,29 @@ plot(years,ci[,2],type='n',ylim=yrng,ylab="Mean Tree Biomass")
 #ciEnvelope(years,ci[,1],ci[,3],col="lightBlue")
 #lines(years,ci[,2],lwd=3)
 for(s in 1:nsites){
-  lines(years,mup.median[s,],lty=3,col=s,lwd=2)
+  ciEnvelope(years,mup.ci[s,,1],mup.ci[s,,3],col=mycol(s))
+}
+for(s in 1:nsites){
+  lines(years,mup.ci[s,,2],lty=3,col=s,lwd=2)
   points(years,site.mass[s,],col=s,lty=2,lwd=3)
 }
 
+#### MEAN STEM DENSITY ###################
 ci.r = matrix(NA,nyears,3)
-rhop.median = matrix(NA,nsites,nyears)
+rhop.ci = array(NA,c(nsites,nyears,3))
 for(y in 1:nyears){
   ci.r[y,] <- quantile(b.df[,paste0("rho[",y,"]")],c(0.025,0.5,0.975))
   for(s in 1:nsites){
-    rhop.median[s,y] = median(b.df[,paste0("rhop[",s,",",y,"]")])
+    rhop.ci[s,y,] = quantile(b.df[,paste0("rhop[",s,",",y,"]")],c(0.025,0.5,0.975))
   }
 }
 plot(years,ci.r[,2],type='n',ylim=c(0,0.5)#range(ci.r)
      ,ylab="Mean Stem Density")
-ciEnvelope(years,ci.r[,1],ci.r[,3],col="lightBlue")
-lines(years,ci.r[,2],lwd=3)
+#ciEnvelope(years,ci.r[,1],ci.r[,3],col="lightBlue")
+#lines(years,ci.r[,2],lwd=3)
+for(s in 1:nsites){
+  ciEnvelope(years,rhop.ci[s,,1],rhop.ci[s,,3],col=mycol(s))
+}
 for(s in 1:nsites){
   lines(years,rhop.median[s,],lty=3,col=s,lwd=2)
   points(census.year+years[1]-1,rho[s,],col=s,lty=2,lwd=3)
@@ -319,13 +331,14 @@ for(s in 1:nsites){
   rho2[s,census.year] = rho[s,]
 }
 
+### ABOVEGROUND BIOMASS ################
 ci.agb = matrix(NA,nyears,3)
-AGBp.median = matrix(NA,nsites,nyears)
+AGBp.ci = array(NA,c(nsites,nyears,3))
 for(y in 1:nyears){
   agb = b.df[,paste0("mu[",y,"]")]*b.df[,paste0("rho[",y,"]")]*10 # kg/m2 -> Mg/ha
   ci.agb[y,] <- quantile(agb,c(0.025,0.5,0.975))
   for(s in 1:nsites){
-    AGBp.median[s,y] = median(b.df[,paste0("rhop[",s,",",y,"]")]*b.df[,paste0("mup[",s,",",y,"]")])*10
+    AGBp.ci[s,y,] = quantile(b.df[,paste0("rhop[",s,",",y,"]")]*b.df[,paste0("mup[",s,",",y,"]")],c(0.025,0.5,0.975))*10
   }
 }
 agb.raw = rho2*site.mass*10
@@ -334,13 +347,15 @@ plot(years,ci.agb[,2],type='n',ylim=yrng,ylab="Mean AGB (Mg/ha)")
 #ciEnvelope(years,ci.agb[,1],ci.agb[,3],col="lightBlue")
 #lines(years,ci.agb[,2],lwd=3)
 for(s in 1:nsites){
+  ciEnvelope(years,AGBp.ci[s,,1],AGBp.ci[s,,3],col=mycol(s))
+}
+for(s in 1:nsites){
   lines(years,AGBp.median[s,],lty=3,col=s,lwd=2)
-  points(years,agb.raw,col=s,lty=2,lwd=3)
+  points(years,agb.raw[s,],col=s,lty=2,lwd=3)
 }
 
 
-
-## Plot the evolution of mean tree size and density
+## Plot the bivariate evolution of mean tree size and density
 xlim=range(rhop.median)
 ylim=range(mup.median)
 yr=years-years[1]+1
@@ -348,6 +363,7 @@ plot(rhop.median[1,],mup.median[1,],type='n',xlim=xlim,ylim=ylim,
     xlab="Stem Density",ylab="Mean Tree Biomass")
 for(i in 1:nsites){
   arrows(rhop.median[i,-nyears],mup.median[i,-nyears],rhop.median[i,-1],mup.median[i,-1],col=i,length=0.1)
+  points(rho2[i,],site.mass[i,],col=i)
 }
 ```
 
