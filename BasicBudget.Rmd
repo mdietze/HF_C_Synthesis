@@ -99,17 +99,28 @@ for(y in 1:ncol(plot.yr.area)){
 #site.yr.cnt[is.na(site.yr.cnt)] <- NA
 site.yr.time = which(site.yr.cnt > 0,arr.ind = TRUE)
 
+## empirical estimate of stem density
 rho = site.yr.cnt/site.yr.area;rho[is.nan(rho)] <- NA
 plot(rho[1,],ylim=range(rho,na.rm=TRUE),type='l')
 for(s in 2:nsites){
   lines(rho[s,])
 }
 
+## empirical estimate of mean tree biomass
+tree.mass <- exp(b0+b1*log(tree$dbh))
+site.mass <- matrix(NA,nsites,nyears)
+for(y in 1:nyears){
+  sel.y = which(tree$year == years[y])
+  if(length(sel)>0){
+    site.mass[,y] = tapply(tree.mass[sel.y],site[sel.y],mean,na.rm=TRUE)
+  }
+}
+mass.yr = which(!is.na(site.mass),arr.ind = TRUE)
+
+
 #data = list(dbh=tree$dbh,n=nrow(tree),ny=nyears,yi=year.index,stem.count=stem.count,census.area=census.area,census.time=census.time,B=B,SIGMA=SIGMA,tau.allom=tau.allom)
 
-data = list(dbh=tree$dbh,n=nrow(tree),ny=nyears,yi=year.index,stem.count=site.yr.cnt,census.area=site.yr.area,census.time=site.yr.time,B=B,SIGMA=SIGMA,tau.allom=tau.allom,ns=nsites,nobs=nrow(site.yr.time),census.year=census.year)
-
-
+data = list(dbh=tree$dbh,n=nrow(tree),ny=nyears,yi=year.index,stem.count=site.yr.cnt,census.area=site.yr.area,census.time=site.yr.time,B=B,SIGMA=SIGMA,tau.allom=tau.allom,ns=nsites,nobs=nrow(site.yr.time),census.year=census.year,si=site.index)
 
 ```
 
@@ -132,7 +143,7 @@ tau_h.ic = 1/var(rhop.ic)
 rho.ic = mean(rhop.ic)
 tau_proc.rhop.ic = 1/mean(apply(rho,1,function(x){var(diff(x),na.rm=TRUE)}),na.rm=TRUE)
 
-init =  list(mu=mu.ic+alpha.ic,tau_obs=prec.ic,tau_proc=tau_year.ic,rhop0=rhop.ic,rho0=rho.ic,tau_proc.rhop=tau_proc.rhop.ic,tau_h.rho=tau_h.ic)
+init =  list(mu=mu.ic+alpha.ic,tau_obs=prec.ic,tau_proc.mu=tau_year.ic,rhop0=rhop.ic,rho0=rho.ic,tau_proc.rhop=tau_proc.rhop.ic,tau_h.rho=tau_h.ic)
 ```
 
 ## 6. Basic Code
@@ -148,21 +159,37 @@ data{
 }
 model{
 
-  ## Stem Biomass
-  mu0 ~ dnorm(20,0.001)
-  tau_proc ~ dgamma(0.1,0.1)
-  tau_obs ~ dgamma(0.1,0.1)
+  ## Stem Biomass #################
+  mu0 ~ dlnorm(3,0.001)
+  for(i in 1:ns){
+    mup0[i] ~dlnorm(3,0.001) 
+  }
+  tau_proc.mu  ~ dgamma(0.1,0.1)
+  tau_proc.mup ~ dgamma(0.1,0.1)
+  tau_h.mu ~ dgamma(0.1,0.1)
+  tau_obs  ~ dgamma(0.1,0.1)
 
-  ## Process model
+  ## Process model: Landscape scale
   mu[1] <- mu0
   for(y in 2:ny){
     E[y] <- log(mu[y-1]) 
-    mu[y] ~ dlnorm(E[y],tau_proc)
+    mu[y] ~ dlnorm(E[y],tau_proc.mu)
+  }
+
+  ## Process model: Site scale
+  pmp <- tau_proc.mup+tau_h.mu
+  for(s in 1:ns){
+    Emp[s,1] <- log(mup0[s])*tau_proc.mup/pmp + log(mu[1])*tau_h.mu/pmp
+    mup[s,1] ~ dlnorm(Emp[s,1],pmp)
+    for(y in 2:ny){
+      Emp[s,y] <- log(mup[s,y-1])*tau_proc.mup/pmp + log(mu[y])*tau_h.mu/pmp
+      mup[s,y] ~ dlnorm(Emp[s,y],pmp)
+      }
   }
 
   ## observation model
   for(i in 1:n){
-    theta[i] <- log(mu[yi[i]])
+    theta[i] <- log(mup[si[i],yi[i]])
     Emass[i] ~ dlnorm(theta[i],tau_obs)
   }
 
@@ -170,12 +197,10 @@ model{
   rho0 ~ dlnorm(-2,0.001)
   for(i in 1:ns){
     rhop0[i] ~ dlnorm(-2,0.001)
-#    rhop[i,1] <- rhop0[i]
   }
   tau_proc.rho ~ dgamma(0.1,0.1)  # process landscale     ### ending up too tight
   tau_proc.rhop ~ dgamma(5,0.0005) # process within site              ### HACK
   tau_h.rho ~ dgamma(0.1,0.1)     # heterogeneity among sites
-#  tau_obs.rho ~ dgamma(0.1,0.1)   
 
   ## State space latent rho
   rho[1] <- rho0
@@ -224,8 +249,8 @@ j.model   <- jags.model (file = textConnection(BasicBudget),
 
 ```{r}
 ## burn-in
-bmcmc   <- coda.samples (model = j.model,
-                              variable.names = c("mu","tau_obs","tau_proc","rho","tau_proc.rho","tau_h.rho","tau_proc.rhop","rhop"),
+bmcmc   <- coda.samples(model = j.model,
+                              variable.names = c("mu","mup","tau_obs","tau_proc.mu","tau_proc.mup","rho","tau_proc.rho","tau_h.rho","tau_proc.rhop","rhop"),
                               n.iter = 3000)
 
 ```
@@ -249,13 +274,22 @@ quantile(mu,c(0.025,0.5,0.975))
 b.df = as.data.frame(as.matrix(bmcmc))
 
 ci = matrix(NA,nyears,3)
+mup.median = matrix(NA,nsites,nyears)
 for(y in 1:nyears){
   ci[y,] <- quantile(b.df[,paste0("mu[",y,"]")],c(0.025,0.5,0.975))
+    for(s in 1:nsites){
+    mup.median[s,y] = median(b.df[,paste0("mup[",s,",",y,"]")])
+  }
 }
-yrng=range(ci); yrng[2] = min(yrng[2],200)
+#yrng=range(ci); yrng[2] = min(yrng[2],200)
+yrng = c(0,1000)
 plot(years,ci[,2],type='n',ylim=yrng,ylab="Mean Tree Biomass")
 ciEnvelope(years,ci[,1],ci[,3],col="lightBlue")
 lines(years,ci[,2],lwd=3)
+for(s in 1:nsites){
+  lines(years,mup.median[s,],lty=3,col=s,lwd=2)
+  points(years,site.mass[s,],col=s,lty=2,lwd=3)
+}
 
 ci.r = matrix(NA,nyears,3)
 rhop.median = matrix(NA,nsites,nyears)
