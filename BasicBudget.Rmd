@@ -323,7 +323,7 @@ for(s in 1:nsites){
   ciEnvelope(years,rhop.ci[s,,1],rhop.ci[s,,3],col=mycol(s))
 }
 for(s in 1:nsites){
-  lines(years,rhop.median[s,],lty=3,col=s,lwd=2)
+  lines(years,rhop.ci[s,,2],lty=3,col=s,lwd=2)
   points(census.year+years[1]-1,rho[s,],col=s,lty=2,lwd=3)
 }
 rho2 = matrix(NA,nsites,nyears)
@@ -359,13 +359,13 @@ for(s in 1:nsites){
 
 
 ## Plot the bivariate evolution of mean tree size and density
-xlim=range(rhop.median)
-ylim=range(mup.median)
+ylim=range(rhop.ci[,,2])
+xlim=range(mup.ci[,,2])
 yr=years-years[1]+1
-plot(rhop.median[1,],mup.median[1,],type='n',xlim=xlim,ylim=ylim,
-    xlab="Stem Density",ylab="Mean Tree Biomass")
+plot(mup.ci[1,,2],rhop.ci[1,,2],type='n',xlim=xlim,ylim=ylim,
+    ylab="Stem Density",xlab="Mean Tree Biomass")
 for(i in 1:nsites){
-  arrows(rhop.median[i,-nyears],mup.median[i,-nyears],rhop.median[i,-1],mup.median[i,-1],col=i,length=0.1)
+  arrows(mup.ci[i,-nyears,2],rhop.ci[i,-nyears,2],mup.ci[i,-1,2],rhop.ci[i,-1,2],col=i,length=0.1)
 #  points(rho2[i,],site.mass[i,],col=i)
 }
 
