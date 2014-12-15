@@ -49,8 +49,8 @@ tree = tree[which(tree$site %in% c("ems","hemlock","red pine plantation","mixed 
 b0 = -2.48
 b1 = 2.48
 B = c(b0,b1)
-SIGMA = solve(diag(0.01,2))
-tau.allom = 1000
+SIGMA = solve(diag(0.0001,2))
+tau.allom = 100000
 ```
 
 
@@ -107,7 +107,7 @@ for(s in 2:nsites){
 }
 
 ## empirical estimate of mean tree biomass
-tree.mass <- exp(b0+b1*log(tree$dbh))
+tree.mass <- exp(b0+b1*log(tree$dbh)+0.5/tau_allom)  ## empircal mean estimate needs var/2 correction
 site.mass <- matrix(NA,nsites,nyears)
 for(y in 1:nyears){
   sel.y = which(tree$year == years[y])
@@ -350,9 +350,12 @@ for(s in 1:nsites){
   ciEnvelope(years,AGBp.ci[s,,1],AGBp.ci[s,,3],col=mycol(s))
 }
 for(s in 1:nsites){
-  lines(years,AGBp.median[s,],lty=3,col=s,lwd=2)
+  lines(years,AGBp.ci[s,,2],lty=3,col=s,lwd=2)
   points(years,agb.raw[s,],col=s,lty=2,lwd=3)
 }
+
+## Composite AGB
+
 
 
 ## Plot the bivariate evolution of mean tree size and density
@@ -363,7 +366,9 @@ plot(rhop.median[1,],mup.median[1,],type='n',xlim=xlim,ylim=ylim,
     xlab="Stem Density",ylab="Mean Tree Biomass")
 for(i in 1:nsites){
   arrows(rhop.median[i,-nyears],mup.median[i,-nyears],rhop.median[i,-1],mup.median[i,-1],col=i,length=0.1)
-  points(rho2[i,],site.mass[i,],col=i)
+#  points(rho2[i,],site.mass[i,],col=i)
 }
+
+
 ```
 
