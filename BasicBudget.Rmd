@@ -107,7 +107,7 @@ for(s in 2:nsites){
 }
 
 ## empirical estimate of mean tree biomass
-tree.mass <- exp(b0+b1*log(tree$dbh)+0.5/tau_allom)  ## empircal mean estimate needs var/2 correction
+tree.mass <- exp(b0+b1*log(tree$dbh)+0.5/tau.allom)  ## empircal mean estimate needs var/2 correction
 site.mass <- matrix(NA,nsites,nyears)
 for(y in 1:nyears){
   sel.y = which(tree$year == years[y])
