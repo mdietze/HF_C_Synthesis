@@ -19,8 +19,7 @@ output: html_document
 ## 0. Settings, etc
 
 ```{r}
-#setwd("~/Dropbox/HF C Synthesis")
-setwd("~/Documents/Research/HF_C_Synthesis/")
+setwd("~/Dropbox/HF C Synthesis")
 library(rjags)
 
 ciEnvelope <- function(x,ylo,yhi,...){
@@ -33,7 +32,7 @@ ciEnvelope <- function(x,ylo,yhi,...){
 ## 1. Load up data
 
 ```{r}
-tree = read.csv("~/Dropbox/HF C Synthesis/Data/live trees/hf-c-trees-live.csv",header=TRUE)
+tree = read.csv("Data/live trees/hf-c-trees-live.csv",header=TRUE)
 tree = tree[,-grep('^X',colnames(tree))]  ## drop columns with names starting with X
 tree = tree[-which(is.na(tree$dbh)),] ## drop rows with missing DBH
 tree = tree[-which(tree$obs.exp == "exp"),] ## drop trees from experimental manipulations
