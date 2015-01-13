@@ -19,7 +19,8 @@ output: html_document
 ## 0. Settings, etc
 
 ```{r}
-setwd("~/Dropbox/HF C Synthesis")
+#setwd("~/Dropbox/HF C Synthesis")
+setwd("~/Documents/Research/HF_C_Synthesis/")
 library(rjags)
 
 ciEnvelope <- function(x,ylo,yhi,...){
@@ -32,7 +33,7 @@ ciEnvelope <- function(x,ylo,yhi,...){
 ## 1. Load up data
 
 ```{r}
-tree = read.csv("Data/live trees/hf-c-trees-live.csv",header=TRUE)
+tree = read.csv("~/Dropbox/HF C Synthesis/Data/live trees/hf-c-trees-live.csv",header=TRUE)
 tree = tree[,-grep('^X',colnames(tree))]  ## drop columns with names starting with X
 tree = tree[-which(is.na(tree$dbh)),] ## drop rows with missing DBH
 tree = tree[-which(tree$obs.exp == "exp"),] ## drop trees from experimental manipulations
@@ -107,7 +108,7 @@ for(s in 2:nsites){
 }
 
 ## empirical estimate of mean tree biomass
-tree.mass <- exp(b0+b1*log(tree$dbh)+0.5/tau_allom)  ## empircal mean estimate needs var/2 correction
+tree.mass <- exp(b0+b1*log(tree$dbh)+0.5/tau.allom)  ## empircal mean estimate needs var/2 correction
 site.mass <- matrix(NA,nsites,nyears)
 for(y in 1:nyears){
   sel.y = which(tree$year == years[y])
