@@ -38,7 +38,7 @@ tree = tree[-which(is.na(tree$dbh)),] ## drop rows with missing DBH
 tree = tree[-which(tree$obs.exp == "exp"),] ## drop trees from experimental manipulations
 
 ## Testing subset
-tree = tree[which(tree$site %in% c("ems","hemlock","red pine plantation","mixed hardwood","pisgah")),]
+tree = tree[which(tree$site %in% c("ems","hemlock","hemlock woodlot","red pine plantation","mixed hardwood","pisgah","simes","TS")),]
 ```
 
 
@@ -107,7 +107,7 @@ for(s in 2:nsites){
 }
 
 ## empirical estimate of mean tree biomass
-tree.mass <- exp(b0+b1*log(tree$dbh)+0.5/tau_allom)  ## empircal mean estimate needs var/2 correction
+tree.mass <- exp(b0+b1*log(tree$dbh)+0.5/tau.allom)  ## empircal mean estimate needs var/2 correction
 site.mass <- matrix(NA,nsites,nyears)
 for(y in 1:nyears){
   sel.y = which(tree$year == years[y])
@@ -258,8 +258,8 @@ j.model   <- jags.model (file = textConnection(BasicBudget),
 ## burn-in
 bmcmc   <- coda.samples(model = j.model,
                               variable.names = c("mu","mup","tau_obs","tau_proc.mu","tau_proc.mup","rho","tau_proc.rho","tau_h.rho","tau_proc.rhop","rhop"),
-                              n.iter = 3000)
-
+                              n.iter = 10000)
+save(bmcmc,file="~/documents/BasicBudget.RData")
 ```
 
 
@@ -279,6 +279,8 @@ quantile(mu,c(0.025,0.5,0.975))
 
 ```{r}
 b.df = as.data.frame(as.matrix(bmcmc))
+sel = 5000:10000
+sel = c(sel,sel+10000,sel+20000)
 
 cols = col2rgb(1:nsites,TRUE)
 cols['alpha',]=cols['alpha',]/2
@@ -288,14 +290,14 @@ mycol <- function(i){rgb(cols[1,i],cols[2,i],cols[3,i],cols[4,i],maxColorValue=2
 ci = matrix(NA,nyears,3)
 mup.ci = array(NA,c(nsites,nyears,3))
 for(y in 1:nyears){
-  ci[y,] <- quantile(b.df[,paste0("mu[",y,"]")],c(0.025,0.5,0.975))
+  ci[y,] <- quantile(b.df[sel,paste0("mu[",y,"]")],c(0.025,0.5,0.975))
   for(s in 1:nsites){
-    mup.ci[s,y,] = quantile(b.df[,paste0("mup[",s,",",y,"]")],c(0.025,0.5,0.975))
+    mup.ci[s,y,] = quantile(b.df[sel,paste0("mup[",s,",",y,"]")],c(0.025,0.5,0.975))
   }
 }
 #yrng=range(ci); yrng[2] = min(yrng[2],200)
 yrng = c(0,1000)
-plot(years,ci[,2],type='n',ylim=yrng,ylab="Mean Tree Biomass")
+plot(years,ci[,2],type='n',ylim=yrng,ylab="Mean Tree Biomass (kg)",cex.lab=1.3)
 #ciEnvelope(years,ci[,1],ci[,3],col="lightBlue")
 #lines(years,ci[,2],lwd=3)
 for(s in 1:nsites){
@@ -310,13 +312,13 @@ for(s in 1:nsites){
 ci.r = matrix(NA,nyears,3)
 rhop.ci = array(NA,c(nsites,nyears,3))
 for(y in 1:nyears){
-  ci.r[y,] <- quantile(b.df[,paste0("rho[",y,"]")],c(0.025,0.5,0.975))
+  ci.r[y,] <- quantile(b.df[sel,paste0("rho[",y,"]")],c(0.025,0.5,0.975))
   for(s in 1:nsites){
-    rhop.ci[s,y,] = quantile(b.df[,paste0("rhop[",s,",",y,"]")],c(0.025,0.5,0.975))
+    rhop.ci[s,y,] = quantile(b.df[sel,paste0("rhop[",s,",",y,"]")],c(0.025,0.5,0.975))
   }
 }
-plot(years,ci.r[,2],type='n',ylim=c(0,0.5)#range(ci.r)
-     ,ylab="Mean Stem Density")
+plot(years,ci.r[,2],type='n',ylim=c(0,0.3)#range(ci.r)
+     ,ylab="Mean Stem Density",cex.lab=1.3)
 #ciEnvelope(years,ci.r[,1],ci.r[,3],col="lightBlue")
 #lines(years,ci.r[,2],lwd=3)
 for(s in 1:nsites){
@@ -335,15 +337,15 @@ for(s in 1:nsites){
 ci.agb = matrix(NA,nyears,3)
 AGBp.ci = array(NA,c(nsites,nyears,3))
 for(y in 1:nyears){
-  agb = b.df[,paste0("mu[",y,"]")]*b.df[,paste0("rho[",y,"]")]*10 # kg/m2 -> Mg/ha
+  agb = b.df[sel,paste0("mu[",y,"]")]*b.df[sel,paste0("rho[",y,"]")]*10 # kg/m2 -> Mg/ha
   ci.agb[y,] <- quantile(agb,c(0.025,0.5,0.975))
   for(s in 1:nsites){
-    AGBp.ci[s,y,] = quantile(b.df[,paste0("rhop[",s,",",y,"]")]*b.df[,paste0("mup[",s,",",y,"]")],c(0.025,0.5,0.975))*10
+    AGBp.ci[s,y,] = quantile(b.df[sel,paste0("rhop[",s,",",y,"]")]*b.df[sel,paste0("mup[",s,",",y,"]")],c(0.025,0.5,0.975))*10
   }
 }
 agb.raw = rho2*site.mass*10
 yrng=c(0,500)#range(AGBp.median)#range(ci); yrng[2] = min(yrng[2],150)
-plot(years,ci.agb[,2],type='n',ylim=yrng,ylab="Mean AGB (Mg/ha)")
+plot(years,ci.agb[,2],type='n',ylim=yrng,ylab="Mean AGB (Mg/ha)",cex.lab=1.3)
 #ciEnvelope(years,ci.agb[,1],ci.agb[,3],col="lightBlue")
 #lines(years,ci.agb[,2],lwd=3)
 for(s in 1:nsites){
@@ -354,21 +356,92 @@ for(s in 1:nsites){
   points(years,agb.raw[s,],col=s,lty=2,lwd=3)
 }
 
-## Composite AGB
-
-
-
 ## Plot the bivariate evolution of mean tree size and density
+C=2/3*log(400)+log(0.09)
 ylim=range(rhop.ci[,,2])
 xlim=range(mup.ci[,,2])
+mseq = seq(10,xlim[2],len=100)
+n.thin = exp(C-2/3*log(mseq))
 yr=years-years[1]+1
 plot(mup.ci[1,,2],rhop.ci[1,,2],type='n',xlim=xlim,ylim=ylim,
-    ylab="Stem Density",xlab="Mean Tree Biomass")
+    ylab="Stem Density (trees/m2)",xlab="Mean Tree Biomass (kg)",cex.lab=1.3)
 for(i in 1:nsites){
-  arrows(mup.ci[i,-nyears,2],rhop.ci[i,-nyears,2],mup.ci[i,-1,2],rhop.ci[i,-1,2],col=i,length=0.1)
+  arrows(mup.ci[i,-nyears,2],rhop.ci[i,-nyears,2],mup.ci[i,-1,2],rhop.ci[i,-1,2],col=i,length=0.1,lwd=2)
 #  points(rho2[i,],site.mass[i,],col=i)
+}
+lines(mseq,n.thin,lty=2,lwd=2)
+
+lines(mseq,100/(mseq*10),lty=3)
+lines(mseq,200/(mseq*10),lty=3)
+lines(mseq,300/(mseq*10),lty=3)
+lines(mseq,400/(mseq*10),lty=3)
+
+```
+
+## Composite AGB
+
+```{r}
+n0 = 2
+
+## priors
+mu0 = 250
+tau0  = 0.000001
+t1 = t2 = 0.01
+
+## storage
+ngibbs = nrow(b.df)
+mu_h = tau_h = matrix(numeric(0),ngibbs,nyears)
+
+## initial conditions
+AGBsite = init$mup0*init$rho0*10
+mu_h[1,] = mean(AGBsite)
+tau_h[1,] = 1/var(AGBsite)
+
+## MCMC
+for(g in n0:ngibbs){
+  
+  for(y in 1:nyears){
+    
+    ## site AGB estimates
+    AGB = b.df[g,paste0("mup[",1:nsites,",",y,"]")]*b.df[g,paste0("rhop[",1:nsites,",",y,"]")]*10
+      
+    ## update means
+    w = nsites*tau_h[g-1,y]+tau0
+    sd = sqrt(1/w)
+    mu = (sum(AGB)*tau_h[g-1,y]+mu0*tau0)/w
+    mu_h[g,y] = rnorm(1,mu,sd)
+    
+    ## update sd
+    u1 <- t1 + nsites/2
+    u2 <- t2 + 0.5*sum((AGB-mu_h[g,y])^2)
+    tau_h[g,y] <- rgamma(1,u1,u2)    
+  }
+  
+  if(g %% 100 == 0){print(g)}
+}
+
+save(bmcmc,mu_h,tau_h,file="~/Documents/BasicBudget.RData")
+```
+
+```{r}
+### ABOVEGROUND BIOMASS ################
+sel = 5000:10000
+sel = c(sel,sel+10000,sel+20000)
+ci.agb = matrix(NA,nyears,3)
+for(y in 1:nyears){
+  ci.agb[y,] <- quantile(mu_h[sel,y],c(0.025,0.5,0.975),na.rm=TRUE)
+}
+#agb.raw = rho2*site.mass*10
+yrng=c(0,500)#range(AGBp.median)#range(ci); yrng[2] = min(yrng[2],150)
+plot(years,ci.agb[,2],type='n',ylim=yrng,ylab="Mean AGB (Mg/ha)",cex.lab=1.3)
+ciEnvelope(years,ci.agb[,1],ci.agb[,3],col="lightBlue")
+lines(years,ci.agb[,2],lwd=6,col="darkBlue")
+for(s in 1:nsites){
+  lines(years,AGBp.ci[s,,2],lty=3,col=s,lwd=2)
+  points(years,agb.raw[s,],col=s,lty=2,lwd=3)
 }
 
 
 ```
+
 
