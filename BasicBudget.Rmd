@@ -8,6 +8,7 @@ output: html_document
 ## TASKS
 
 1. Load up data
+1.1 Match treering and adult data
 2. Estimate any uncertainties required as inputs, but which were not provided in the data
 3. Format data for JAGS
 4. Specify / Estimate Priors
@@ -21,6 +22,13 @@ output: html_document
 ```{r}
 setwd("~/Dropbox/HF C Synthesis")
 library(rjags)
+library(dplR)
+# library(sp)
+# library(foreign)
+# library(lattice)
+# library(ggplot2)
+# library(sciplot)
+# library(data.table)
 
 ciEnvelope <- function(x,ylo,yhi,...){
   polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
@@ -32,15 +40,70 @@ ciEnvelope <- function(x,ylo,yhi,...){
 ## 1. Load up data
 
 ```{r}
-tree = read.csv("Data/live trees/hf-c-trees-live.csv",header=TRUE)
-tree = tree[,-grep('^X',colnames(tree))]  ## drop columns with names starting with X
-tree = tree[-which(is.na(tree$dbh)),] ## drop rows with missing DBH
-tree = tree[-which(tree$obs.exp == "exp"),] ## drop trees from experimental manipulations
+## load plot tree data
+raw.tree = read.csv("Data/live trees/hf-c-trees-live_26Jan2015.csv",header=TRUE)
+#tree = raw.tree[,-grep('^X',colnames(tree))]  ## drop columns with names starting with X
+tree = raw.tree[-which(is.na(raw.tree$dbh)),] ## drop rows with missing DBH
+tree = raw.tree[-which(raw.tree$obs.exp == "exp"),] ## drop trees from experimental manipulations
 
 ## Testing subset
-tree = tree[which(tree$site %in% c("ems","hemlock","red pine plantation","mixed hardwood","pisgah")),]
+tree = tree[which(tree$site %in% c("ems","hemlock","red pine plantation","mixed hardwood","pisgah","lyford")),]
+
+## load rings
+## code that loops over a whole set of Tuscon files
+
+Read_Tuscon <- function(folder){
+require(dplR)
+filenames <- dir(folder,pattern = "rw",full.names=TRUE)
+filenames <- c(filenames,dir(folder,pattern = "rw",full.names=TRUE))
+filedata <- list()
+for (file in filenames){
+filedata[[file]] <- read.tucson(file, header = FALSE)
+}
+return(filedata)
+}
+
+folder <- "Data/Tree_Rings/Lyford_Data_13m/RW/Combined/"
+
+raw.rings <- Read_Tuscon(folder)
 ```
 
+## 1.1 Match treerings and adult plot data
+```{r}
+# build tree ring codes
+if(is.list(raw.rings)){
+  rings <- combine.rwl(raw.rings)  
+  }
+ring.ID <- names(rings)
+
+## transpose rings for easier aggregation
+rings.t <- t(rings)
+
+## recode ring IDS to average multiple cores from same tree
+recode <- substr(as.character(colnames(rings)),1,5)
+rings.recode <- data.frame(recode,rings.t)
+
+## ring averages per tree
+rings.agg <- aggregate(rings.recode,by=list(recode),FUN=mean,na.rm=TRUE)
+
+## match rings and treering plot data
+## ems treerings are also usable - have not looked at format recently, but is hopefully similar
+lyford.plots <- read.csv("Data/Tree_Rings/Lyford_Data_13m/LyfordAllPlots.csv",skip=2)
+
+## append site & tree number
+rings.agg$Site <- substr(as.character(rings.agg$Group.1),1,3)
+rings.agg$Tree.Number <- as.numeric(as.character(substr(as.character(rings.agg$Group.1),4,6)))
+
+## merge plot and treering
+rings.plot.merge <- merge(rings.agg,lyford.plots,by=c("Site","Tree.Number"))
+
+## "Tag" from rings.plot.merge and "tree" from hf-c-trees-live should match
+## data of live trees are in long, not wide format
+## subset just lyford
+lyf <- which(tree$site == "lyford")
+lyford.tree <- tree[lyf,]
+
+```
 
 ## 2. Estimate any uncertainties required as inputs, but which were not provided in the data
 
