@@ -13,9 +13,11 @@ output: html_document
 3. Format data for JAGS
 4. Specify / Estimate Priors
 5. Specify / Estimate Initial Conditions for MCMC
-6. Basic Code
+6. Basic Codes
+6.1 Run tree ring / plot fusion at a plot scale
 7. Post-Processing & Convergence Checking
 8. Visualization
+9. Run plot -> landscape fusion
 
 ## 0. Settings, etc
 
@@ -23,6 +25,7 @@ output: html_document
 setwd("~/Dropbox/HF C Synthesis")
 library(rjags)
 library(dplR)
+library(PEcAn.data.land)
 # library(sp)
 # library(foreign)
 # library(lattice)
@@ -50,21 +53,7 @@ tree = raw.tree[-which(raw.tree$obs.exp == "exp"),] ## drop trees from experimen
 tree = tree[which(tree$site %in% c("ems","hemlock","hemlock woodlot","red pine plantation","mixed hardwood","pisgah","lyford","simes","TS")),]
 
 ## load rings
-## code that loops over a whole set of Tuscon files
-
-Read_Tuscon <- function(folder){
-require(dplR)
-filenames <- dir(folder,pattern = "rw",full.names=TRUE)
-filenames <- c(filenames,dir(folder,pattern = "rw",full.names=TRUE))
-filedata <- list()
-for (file in filenames){
-filedata[[file]] <- read.tucson(file, header = FALSE)
-}
-return(filedata)
-}
-
 folder <- "Data/Tree_Rings/Lyford_Data_13m/RW/Combined/"
-
 raw.rings <- Read_Tuscon(folder)
 ```
 
