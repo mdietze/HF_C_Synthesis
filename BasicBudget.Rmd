@@ -70,7 +70,7 @@ rings.t <- t(rings)
 
 ## recode ring IDS to average multiple cores from same tree
 recode <- substr(as.character(colnames(rings)),1,5)
-rings.recode <- data.frame(recode,rings.t)
+rings.recode <- data.frame(recode,rings.t,check.names=FALSE)
 
 ## ring averages per tree
 rings.agg <- aggregate(rings.recode,by=list(recode),FUN=mean,na.rm=TRUE)
@@ -91,7 +91,71 @@ rings.plot.merge <- merge(rings.agg,lyford.plots,by=c("Site","Tree.Number"))
 ## subset just lyford
 lyf <- which(tree$site == "lyford")
 lyford.tree <- tree[lyf,]
+## put dbh into wide format
+## census years
+lyf.years <- unique(lyford.tree$year)
 
+## rename Tag in rings.plot.merge to tree
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "Tag"] <- "tree"
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "DBH"] <- "DBH13"
+
+#add diameter measurements from census to treering data
+#1969 census
+dbh69 <- which(lyford.tree$year == lyf.years[1])
+dbh69.match <- as.data.frame(cbind(lyford.tree$tree[dbh69],lyford.tree$dbh[dbh69]))
+colnames(dbh69.match) <- c("tree","dbh")
+
+rings.plot.merge <- merge(rings.plot.merge,dbh69.match,by = "tree",all.x=TRUE)
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH69"
+
+#1975 census
+dbh75 <- which(lyford.tree$year == lyf.years[2])
+dbh75.match <- as.data.frame(cbind(lyford.tree$tree[dbh75],lyford.tree$dbh[dbh75]))
+colnames(dbh75.match) <- c("tree","dbh")
+
+rings.plot.merge <- merge(rings.plot.merge,dbh75.match,by = "tree",all.x=TRUE)
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH75"
+
+#1991 census
+dbh91 <- which(lyford.tree$year == lyf.years[3])
+dbh91.match <- as.data.frame(cbind(lyford.tree$tree[dbh91],lyford.tree$dbh[dbh91]))
+colnames(dbh91.match) <- c("tree","dbh")
+
+rings.plot.merge <- merge(rings.plot.merge,dbh91.match,by = "tree",all.x=TRUE)
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH91"
+
+#1987
+dbh87 <- which(lyford.tree$year == lyf.years[4])
+dbh87.match <- as.data.frame(cbind(lyford.tree$tree[dbh87],lyford.tree$dbh[dbh87]))
+colnames(dbh87.match) <- c("tree","dbh")
+
+rings.plot.merge <- merge(rings.plot.merge,dbh87.match,by = "tree",all.x=TRUE)
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH87"
+
+#1992
+dbh92 <- which(lyford.tree$year == lyf.years[5])
+dbh92.match <- as.data.frame(cbind(lyford.tree$tree[dbh92],lyford.tree$dbh[dbh92]))
+colnames(dbh92.match) <- c("tree","dbh")
+
+rings.plot.merge <- merge(rings.plot.merge,dbh92.match,by = "tree",all.x=TRUE)
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH92"
+
+#2001
+dbh01 <- which(lyford.tree$year == lyf.years[6])
+dbh01.match <- as.data.frame(cbind(lyford.tree$tree[dbh01],lyford.tree$dbh[dbh01]))
+colnames(dbh01.match) <- c("tree","dbh")
+
+rings.plot.merge <- merge(rings.plot.merge,dbh01.match,by = "tree",all.x=TRUE)
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH01"
+
+#2011
+dbh11 <- which(lyford.tree$year == lyf.years[7])
+dbh11.match <- as.data.frame(cbind(lyford.tree$tree[dbh11],lyford.tree$dbh[dbh11]))
+colnames(dbh11.match) <- c("tree","dbh")
+
+## final data frame with treerings and census dbh measurements
+rings.plot.merge <- merge(rings.plot.merge,dbh11.match,by = "tree",all.x=TRUE)
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH11"
 ```
 
 ## 2. Estimate any uncertainties required as inputs, but which were not provided in the data
