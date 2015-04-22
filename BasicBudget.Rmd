@@ -104,16 +104,16 @@ B = c(b0,b1)
 SIGMA = solve(diag(0.0001,2))
 tau.allom = 100000
 
-allom.dir = "Allometry Papers & Analysis"
-allom.files = dir(allom.dir,pattern = "*.Rdata")
-allom.species = sub(pattern = "Allom.","",allom.files)
-allom.species = sub(".3.Rdata","",allom.species)
-allom.mcmc = list()
-for(i in seq_along(allom.files)){
-  load(file.path(allom.dir,allom.files[i])) ## load one allometry file
-  
+library(PEcAn.allometry)
+allom.dir = file.path(getwd(),"Allometry Papers & Analysis")
+allom = load.allom(allom.dir)
+allom.params = list()
+for(i in seq_along(allom)){
+  mu = apply(allom[[i]][[3]],2,mean)
+  sig = cov(allom[[i]][[3]])
+  allom.params[[i]] = list(B=mu[c('Bg0','Bg1')],SIGMA=solve(sig[c('Bg0','Bg1'),c('Bg0','Bg1')]),tau.allom = 1/mu['Sg'])
 }
-
+names(allom.params)=names(allom)
 
 ```
 
