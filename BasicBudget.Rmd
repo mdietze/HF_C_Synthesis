@@ -23,6 +23,7 @@ output: html_document
 
 ```{r}
 setwd("~/Dropbox/HF C Synthesis")
+outdir <- file.path(getwd(),"StateSpaceModel")
 library(rjags)
 library(dplR)
 library(PEcAn.data.land)
@@ -156,6 +157,27 @@ colnames(dbh11.match) <- c("tree","dbh")
 ## final data frame with treerings and census dbh measurements
 rings.plot.merge <- merge(rings.plot.merge,dbh11.match,by = "tree",all.x=TRUE)
 colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH11"
+
+## drop early years
+rpm.years = as.numeric(colnames(rings.plot.merge))
+rings.plot.merge <- rings.plot.merge[,-which(rpm.years < 1968)]
+
+## convert NaNs to NAs
+for(i in 1:ncol(rings.plot.merge)){
+  rings.plot.merge[is.nan(rings.plot.merge[,i]),i] <- NA
+}
+
+## build data object for State Space
+data <- buildJAGSdata_InventoryRings(rings.plot.merge)
+
+n.iter = 3000
+jags.out = InventoryGrowthFusion(data,n.iter=n.iter)
+save(rings.plot.merge,data,jags.out,
+     file=file.path(outdir,"Lyford.treering.Rdata"))
+#pdf(file.path(outdir,"Lyford.treering.Diagnostics.pdf"))
+  InventoryGrowthFusionDiagnostics(jags.out,rings.plot.merge)
+#dev.off()
+
 ```
 
 ## 2. Estimate any uncertainties required as inputs, but which were not provided in the data
