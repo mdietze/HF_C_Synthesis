@@ -103,56 +103,50 @@ colnames(rings.plot.merge)[colnames(rings.plot.merge) == "DBH"] <- "DBH13"
 #add diameter measurements from census to treering data
 #1969 census
 dbh69 <- which(lyford.tree$year == lyf.years[1])
-dbh69.match <- as.data.frame(cbind(lyford.tree$tree[dbh69],lyford.tree$dbh[dbh69]))
-colnames(dbh69.match) <- c("tree","dbh")
+keep <- c("tree","dbh")
+dbh69.match <- lyford.tree[dbh69,names(lyford.tree) %in% keep]
 
-rings.plot.merge <- merge(rings.plot.merge,dbh69.match,by = "tree",all.x=TRUE)
+rings.plot.merge <- merge(rings.plot.merge,dbh69.match,by.x = "tree",all.x=TRUE)
 colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH69"
 
 #1975 census
 dbh75 <- which(lyford.tree$year == lyf.years[2])
-dbh75.match <- as.data.frame(cbind(lyford.tree$tree[dbh75],lyford.tree$dbh[dbh75]))
-colnames(dbh75.match) <- c("tree","dbh")
+dbh75.match <- lyford.tree[dbh75,names(lyford.tree) %in% keep]
 
 rings.plot.merge <- merge(rings.plot.merge,dbh75.match,by = "tree",all.x=TRUE)
 colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH75"
 
 #1991 census
 dbh91 <- which(lyford.tree$year == lyf.years[3])
-dbh91.match <- as.data.frame(cbind(lyford.tree$tree[dbh91],lyford.tree$dbh[dbh91]))
-colnames(dbh91.match) <- c("tree","dbh")
+dbh91.match <- lyford.tree[dbh91,names(lyford.tree) %in% keep]
 
 rings.plot.merge <- merge(rings.plot.merge,dbh91.match,by = "tree",all.x=TRUE)
 colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH91"
 
 #1987
 dbh87 <- which(lyford.tree$year == lyf.years[4])
-dbh87.match <- as.data.frame(cbind(lyford.tree$tree[dbh87],lyford.tree$dbh[dbh87]))
-colnames(dbh87.match) <- c("tree","dbh")
+dbh87.match <- lyford.tree[dbh87,names(lyford.tree) %in% keep]
 
 rings.plot.merge <- merge(rings.plot.merge,dbh87.match,by = "tree",all.x=TRUE)
 colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH87"
 
 #1992
 dbh92 <- which(lyford.tree$year == lyf.years[5])
-dbh92.match <- as.data.frame(cbind(lyford.tree$tree[dbh92],lyford.tree$dbh[dbh92]))
-colnames(dbh92.match) <- c("tree","dbh")
+dbh92.match <- lyford.tree[dbh92,names(lyford.tree) %in% keep]
 
 rings.plot.merge <- merge(rings.plot.merge,dbh92.match,by = "tree",all.x=TRUE)
 colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH92"
 
 #2001
 dbh01 <- which(lyford.tree$year == lyf.years[6])
-dbh01.match <- as.data.frame(cbind(lyford.tree$tree[dbh01],lyford.tree$dbh[dbh01]))
-colnames(dbh01.match) <- c("tree","dbh")
+dbh01.match <- lyford.tree[dbh01,names(lyford.tree) %in% keep]
 
 rings.plot.merge <- merge(rings.plot.merge,dbh01.match,by = "tree",all.x=TRUE)
 colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH01"
 
 #2011
 dbh11 <- which(lyford.tree$year == lyf.years[7])
-dbh11.match <- as.data.frame(cbind(lyford.tree$tree[dbh11],lyford.tree$dbh[dbh11]))
-colnames(dbh11.match) <- c("tree","dbh")
+dbh11.match <- lyford.tree[dbh11,names(lyford.tree) %in% keep]
 
 ## final data frame with treerings and census dbh measurements
 rings.plot.merge <- merge(rings.plot.merge,dbh11.match,by = "tree",all.x=TRUE)
@@ -166,6 +160,16 @@ rings.plot.merge <- rings.plot.merge[,-which(rpm.years < 1968)]
 for(i in 1:ncol(rings.plot.merge)){
   rings.plot.merge[is.nan(rings.plot.merge[,i]),i] <- NA
 }
+
+# check dbh's
+census.dbh <- as.data.frame(cbind(rings.plot.merge$tree,rings.plot.merge$DBH69,
+                  rings.plot.merge$DBH75,rings.plot.merge$DBH87,rings.plot.merge$DBH91,
+                  rings.plot.merge$DBH92,rings.plot.merge$DBH01,rings.plot.merge$DBH11,
+                  rings.plot.merge$DBH13,deparse.level=2))
+
+colnames(census.dbh) <- c("tree","DBH69","DBH75","DBH87","DBH91","DBH92","DBH01","DBH11","DBH13")
+#View(census.dbh)
+
 
 ## build data object for State Space
 data <- buildJAGSdata_InventoryRings(rings.plot.merge)
