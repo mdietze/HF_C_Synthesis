@@ -116,19 +116,19 @@ dbh75.match <- lyford.tree[dbh75,names(lyford.tree) %in% keep]
 rings.plot.merge <- merge(rings.plot.merge,dbh75.match,by = "tree",all.x=TRUE)
 colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH75"
 
-#1991 census
-dbh91 <- which(lyford.tree$year == lyf.years[3])
-dbh91.match <- lyford.tree[dbh91,names(lyford.tree) %in% keep]
-
-rings.plot.merge <- merge(rings.plot.merge,dbh91.match,by = "tree",all.x=TRUE)
-colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH91"
-
 #1987
 dbh87 <- which(lyford.tree$year == lyf.years[4])
 dbh87.match <- lyford.tree[dbh87,names(lyford.tree) %in% keep]
 
 rings.plot.merge <- merge(rings.plot.merge,dbh87.match,by = "tree",all.x=TRUE)
 colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH87"
+
+#1991 census
+dbh91 <- which(lyford.tree$year == lyf.years[3])
+dbh91.match <- lyford.tree[dbh91,names(lyford.tree) %in% keep]
+
+rings.plot.merge <- merge(rings.plot.merge,dbh91.match,by = "tree",all.x=TRUE)
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH91"
 
 #1992
 dbh92 <- which(lyford.tree$year == lyf.years[5])
@@ -147,6 +147,12 @@ colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH01"
 #2011
 dbh11 <- which(lyford.tree$year == lyf.years[7])
 dbh11.match <- lyford.tree[dbh11,names(lyford.tree) %in% keep]
+rings.plot.merge <- merge(rings.plot.merge,dbh11.match,by = "tree",all.x=TRUE)
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH11"
+
+#Renumber 2013
+DBH13 <- rings.plot.merge$DBH13
+rings.plot.merge <- cbind(rings.plot.merge[,-which(colnames(rings.plot.merge) == "DBH13")],DBH13)
 
 ## final data frame with treerings and census dbh measurements
 rings.plot.merge <- merge(rings.plot.merge,dbh11.match,by = "tree",all.x=TRUE)
