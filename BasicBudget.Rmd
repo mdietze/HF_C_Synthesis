@@ -154,13 +154,13 @@ colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH11"
 DBH13 <- rings.plot.merge$DBH13
 rings.plot.merge <- cbind(rings.plot.merge[,-which(colnames(rings.plot.merge) == "DBH13")],DBH13)
 
-## final data frame with treerings and census dbh measurements
-rings.plot.merge <- merge(rings.plot.merge,dbh11.match,by = "tree",all.x=TRUE)
-colnames(rings.plot.merge)[colnames(rings.plot.merge) == "dbh"] <- "DBH11"
-
 ## drop early years
 rpm.years = as.numeric(colnames(rings.plot.merge))
 rings.plot.merge <- rings.plot.merge[,-which(rpm.years < 1968)]
+
+## Rename "Site" to "PLOT" (PEcAn's prefered name)
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "Site"]    <- "PLOT"
+colnames(rings.plot.merge)[colnames(rings.plot.merge) == "Species"] <- "SPP"
 
 ## convert NaNs to NAs
 for(i in 1:ncol(rings.plot.merge)){
