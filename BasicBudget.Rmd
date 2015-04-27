@@ -161,25 +161,30 @@ for(i in 1:ncol(rings.plot.merge)){
   rings.plot.merge[is.nan(rings.plot.merge[,i]),i] <- NA
 }
 
-# check dbh's
-census.dbh <- as.data.frame(cbind(rings.plot.merge$tree,rings.plot.merge$DBH69,
+# reorder DBH columns
+rings.plot.final <- as.data.frame(cbind(rings.plot.merge$tree,rings.plot.merge$Site,
+                  rings.plot.merge$Tree.Number, rings.plot.merge$Group.1, 
+                  rings.plot.merge$Species, rings.plot.merge$Canopy, 
+                  rings.plot.merge$Status, rings.plot.merge$Distance, 
+                  rings.plot.merge$Azimuth, rings.plot.merge$Plot,
+                  rings.plot.merge[,6:51],rings.plot.merge$DBH69,
                   rings.plot.merge$DBH75,rings.plot.merge$DBH87,rings.plot.merge$DBH91,
                   rings.plot.merge$DBH92,rings.plot.merge$DBH01,rings.plot.merge$DBH11,
                   rings.plot.merge$DBH13,deparse.level=2))
 
-colnames(census.dbh) <- c("tree","DBH69","DBH75","DBH87","DBH91","DBH92","DBH01","DBH11","DBH13")
-#View(census.dbh)
+colnames(rings.plot.final) <- c("tree","site","tree_number","group","species","canopy","status","distance","azimuth","plot",c(1968:2013),"DBH69","DBH75","DBH87","DBH91","DBH92","DBH01","DBH11","DBH13")
+View(rings.plot.final)
 
 
 ## build data object for State Space
-data <- buildJAGSdata_InventoryRings(rings.plot.merge)
+data <- buildJAGSdata_InventoryRings(rings.plot.final)
 
 n.iter = 3000
 jags.out = InventoryGrowthFusion(data,n.iter=n.iter)
-save(rings.plot.merge,data,jags.out,
-     file=file.path(outdir,"Lyford.treering.Rdata"))
+save(rings.plot.final,data,jags.out,
+    file=file.path(outdir,"Lyford.treering.Rdata"))
 #pdf(file.path(outdir,"Lyford.treering.Diagnostics.pdf"))
-  InventoryGrowthFusionDiagnostics(jags.out,rings.plot.merge)
+  InventoryGrowthFusionDiagnostics(jags.out,rings.plot.final)
 #dev.off()
 
 ```
