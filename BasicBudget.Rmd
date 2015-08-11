@@ -1,7 +1,6 @@
 ---
 title: "Basic Budget"
 author: "Mike Dietze"
-date: "December 9, 2014"
 output: html_document
 ---
 
@@ -27,6 +26,7 @@ outdir <- file.path(getwd(),"StateSpaceModel")
 library(rjags)
 library(dplR)
 library(PEcAn.data.land)
+library(tidyr)
 # library(sp)
 # library(foreign)
 # library(lattice)
@@ -45,13 +45,22 @@ ciEnvelope <- function(x,ylo,yhi,...){
 
 ```{r}
 ## load plot tree data
-raw.tree = read.csv("Data/live trees/hf-c-trees-live_26Jan2015.csv",header=TRUE)
+##raw.tree = read.csv("Data/live trees/hf-c-trees-live_26Jan2015.csv",header=TRUE)
+raw.tree = read.csv("Data/live trees/live tree data & code/hf-c-trees-gmr-11may.csv",header=TRUE)
 #tree = raw.tree[,-grep('^X',colnames(tree))]  ## drop columns with names starting with X
 tree = raw.tree[-which(is.na(raw.tree$dbh)),] ## drop rows with missing DBH
 tree = raw.tree[-which(raw.tree$obs.exp == "exp"),] ## drop trees from experimental manipulations
 
+## subset trees to a common size threshold
+## ultimately I'd like to drop this but I think it's a handy first pass
+## to make data sets more comparable & computation more efficient
+tapply(tree$dbh,tree$site,min,na.rm=TRUE)
+#tree = tree[tree$dbh>=10,]
+## Commented out because removal has to be done in WIDE format to accommodate ingrowth correctly
+
 ## Testing subset
-tree = tree[which(tree$site %in% c("ems","hemlock","hemlock woodlot","red pine plantation","mixed hardwood","pisgah","lyford","simes","TS")),]
+tree = tree[which(tree$site %in% c("ems","hemlock","hemlock woodlot","red pine plantation","mixed hardwood","lyford","simes","TS","PH")),] 
+#"pisgah" deopped because its in NH
 
 ## load rings
 folder <- "Data/Tree_Rings/Lyford_Data_13m/RW/Combined/"
@@ -176,10 +185,24 @@ census.dbh <- as.data.frame(cbind(rings.plot.merge$tree,rings.plot.merge$DBH69,
 colnames(census.dbh) <- c("tree","DBH69","DBH75","DBH87","DBH91","DBH92","DBH01","DBH11","DBH13")
 #View(census.dbh)
 
+### build plot census data for all trees
+dup = c(14307,14037)
+lyf.dbh  = spread(data = lyford.tree[-dup,c("tree","year","dbh")],year,dbh)
+lyf.cond = spread(data = lyford.tree[-dup,c("tree","year","cond")],year,cond)
+colnames(lyf.cond)[2:8] = paste0("COND",colnames(lyf.cond)[2:8])
+
+##add COND to rings.plot.merge
+#match(lyf.cond$tree,rings.plot.merge$tree)
+rings.plot.merge = merge(rings.plot.merge,lyf.cond,by = "tree",all.x=TRUE)
 
 ## build data object for State Space
 data <- buildJAGSdata_InventoryRings(rings.plot.merge)
 
+```
+
+Run tree ring model
+
+```{r}
 n.iter = 3000
 jags.out = InventoryGrowthFusion(data,n.iter=n.iter)
 save(rings.plot.merge,data,jags.out,
